@@ -1,0 +1,201 @@
+/* Skeuomorphic Dark Metal Theme */
+
+/* Global Reset & Background */
+QWidget {
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+    font-family: "Segoe UI", "Microsoft YaHei", "Arial", sans-serif;
+    font-size: 14px;
+}
+
+QMainWindow > QWidget {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3d3d3d, stop:1 #252525);
+}
+
+/* Group Boxes - Etched Look */
+QGroupBox {
+    border: 1px solid #1a1a1a; /* Dark outer border */
+    border-radius: 8px;
+    margin-top: 24px; /* Space for title */
+    padding-top: 15px;
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #333333, stop:1 #2d2d2d);
+    font-weight: bold;
+    color: #00d1b2; /* Text Accent */
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+    left: 15px;
+    color: #00d1b2;
+    background-color: transparent;
+}
+
+/* Inputs - Recessed/Concave Look */
+QLineEdit, QSpinBox {
+    background-color: #222; /* Darker than bg */
+    border-top: 2px solid #111; /* Top shadow */
+    border-left: 2px solid #111; /* Left shadow */
+    border-right: 1px solid #333; /* Light highlight */
+    border-bottom: 1px solid #333; /* Light highlight */
+    border-radius: 4px;
+    padding: 6px;
+    color: #ffffff;
+    selection-background-color: #00d1b2;
+}
+
+QLineEdit:focus, QSpinBox:focus {
+    border: 1px solid #00d1b2; /* Glow effect */
+    background-color: #1a1a1a;
+}
+
+/* ComboBox - Physical Buttonish Look */
+QComboBox {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4a4a4a, stop:1 #333333);
+    border: 1px solid #111;
+    border-top: 1px solid #555; /* Highlight top */
+    border-radius: 4px;
+    padding: 5px 10px;
+    min-width: 6em;
+}
+
+QComboBox:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #555555, stop:1 #3a3a3a);
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 25px;
+    border-left-width: 1px;
+    border-left-color: #222;
+    border-left-style: solid;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3d3d3d, stop:1 #252525);
+}
+
+QComboBox::down-arrow {
+    image: url(none); /* We don't have an image, let's use a border trick or rely on system style? 
+                       Actually, for pure CSS in Qt, drawing an arrow is hard without an image. 
+                       Let's leave it default or try to standard arrow. 
+                       If we set 'image: none', it disappears. Let's revert to default arrow by NOT setting it, 
+                       or specify a simple unicode if possible? No, we need an image.
+                       Let's omit down-arrow styling to keep default arrow but styled box. */
+}
+
+/* Buttons - Convex/Physical Look */
+QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4e4e4e, stop:1 #333333);
+    border: 1px solid #111;
+    border-top: 1px solid #666; /* Highlight top for 3D effect */
+    border-radius: 6px;
+    padding: 8px 16px;
+    color: #e0e0e0;
+    font-weight: bold;
+    text-shadow: 1px 1px #000;
+}
+
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #5e5e5e, stop:1 #444444);
+    border-top: 1px solid #777;
+}
+
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #222222, stop:1 #333333); /* Inverted */
+    border-top: 1px solid #111; /* Shadow top */
+    border-bottom: 1px solid #444; /* Highlight bottom */
+    padding-top: 10px; /* Physical press movement */
+    padding-bottom: 6px;
+}
+
+/* Primary Button (Start Download) */
+QPushButton#PrimaryButton {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #00d1b2, stop:1 #008f7a);
+    color: #ffffff;
+    border: 1px solid #005c4f;
+    border-top: 1px solid #00ffda; /* Bright highlight */
+    font-size: 16px;
+}
+
+QPushButton#PrimaryButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #00e0bf, stop:1 #00a38b);
+}
+
+QPushButton#PrimaryButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #007060, stop:1 #008f7a);
+    border-top: 1px solid #004d42;
+    padding-top: 10px;
+}
+
+/* Checkboxes */
+QCheckBox {
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    background: #222;
+    border: 1px solid #111;
+    border-bottom: 1px solid #444; /* Highlight bottom for recessed look */
+    border-radius: 3px;
+}
+
+QCheckBox::indicator:checked {
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 #00d1b2, stop:1 #008f7a);
+    border: 1px solid #00d1b2;
+    /* Simulate a glow or dot */
+}
+
+QCheckBox::indicator:hover {
+    border: 1px solid #00d1b2;
+}
+
+/* Scrollbars - Integrated Metallic */
+QScrollBar:vertical {
+    border: 1px solid #1a1a1a;
+    background: #252525;
+    width: 14px;
+    margin: 15px 0 15px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #444, stop:1 #333);
+    min-height: 20px;
+    border-radius: 2px;
+    border: 1px solid #111;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    background: #2b2b2b;
+    height: 14px;
+    subcontrol-origin: margin;
+}
+
+/* Text Edit (Logs) - CRT Monitor style maybe? Or just dark terminal */
+QTextEdit {
+    background-color: #111;
+    border: 2px solid #333;
+    border-right: 1px solid #444;
+    border-bottom: 1px solid #444;
+    border-radius: 4px;
+    color: #00ffcc; /* Terminal Green/Cyber */
+    font-family: "Consolas", "Courier New", monospace;
+}
+
+/* Progress Bar - Liquid Glass */
+QProgressBar {
+    border: 1px solid #444;
+    border-radius: 10px;
+    text-align: center;
+    background: #222;
+    color: white;
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #00ffe5, stop:0.5 #00d1b2, stop:1 #008f7a);
+    border-radius: 8px;
+    margin: 1px; /* Gap for segment effect if desired, or just smooth */
+}
