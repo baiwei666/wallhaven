@@ -11,7 +11,7 @@ class WorkerThread(QThread):
     progress_signal = pyqtSignal(str)
     finished_signal = pyqtSignal()
     
-    def __init__(self, api_key, save_dir, keyword, categories, purity, sorting, resolutions, ratios, atleast, pages, max_workers):
+    def __init__(self, api_key, save_dir, keyword, categories, purity, sorting, resolutions, ratios, atleast, pages, max_workers, min_favs=0, min_views=0):
         super().__init__()
         self.api_key = api_key
         self.save_dir = save_dir
@@ -24,15 +24,23 @@ class WorkerThread(QThread):
         self.atleast = atleast
         self.pages = pages
         self.max_workers = max_workers
+        self.min_favs = min_favs
+        self.min_views = min_views
         self.is_running = True
 
     def run(self):
+        import time
         api = WallhavenAPI(api_key=self.api_key)
         downloader = Downloader(self.save_dir, max_workers=self.max_workers)
         
         total_downloaded = 0
+        page = 1
+        consecutive_empty_pages = 0  # Track consecutive empty pages
+        max_consecutive_empty = 3    # Stop after 3 consecutive truly empty pages
+        retry_count = 0
+        max_retries = 3
         
-        for page in range(1, self.pages + 1):
+        while page <= self.pages:
             if not self.is_running:
                 break
                 
@@ -41,18 +49,57 @@ class WorkerThread(QThread):
                               sorting=self.sorting, resolutions=self.resolutions, ratios=self.ratios, 
                               atleast=self.atleast, page=page)
             
+            # Handle API errors with retry
             if not data or 'data' not in data:
-                self.progress_signal.emit(f"第 {page} 页未找到数据或请求失败。")
-                continue
-                
+                retry_count += 1
+                if retry_count <= max_retries:
+                    self.progress_signal.emit(f"第 {page} 页请求失败，{2*retry_count}秒后重试 ({retry_count}/{max_retries})...")
+                    time.sleep(2 * retry_count)  # Exponential backoff
+                    continue
+                else:
+                    self.progress_signal.emit(f"第 {page} 页多次请求失败，跳过此页继续...")
+                    retry_count = 0
+                    page += 1
+                    continue
+            
+            retry_count = 0  # Reset retry count on success
             wallpapers = data['data']
+            
+            # Check for truly empty results (end of search)
             if not wallpapers:
-                self.progress_signal.emit("没有更多壁纸了。")
-                break
+                consecutive_empty_pages += 1
+                if consecutive_empty_pages >= max_consecutive_empty:
+                    self.progress_signal.emit(f"连续 {max_consecutive_empty} 页无结果，搜索结束。")
+                    break
+                self.progress_signal.emit(f"第 {page} 页无结果，继续搜索... ({consecutive_empty_pages}/{max_consecutive_empty})")
+                page += 1
+                time.sleep(0.5)  # Small delay to avoid rate limiting
+                continue
+            
+            consecutive_empty_pages = 0  # Reset on non-empty page
+            
+            # Client-side filtering by favorites and views
+            filtered_wallpapers = []
+            for wp in wallpapers:
+                if self.min_favs > 0 and wp.get('favorites', 0) < self.min_favs:
+                    continue
+                if self.min_views > 0 and wp.get('views', 0) < self.min_views:
+                    continue
+                filtered_wallpapers.append(wp)
+            
+            filtered_count = len(wallpapers) - len(filtered_wallpapers)
+            if filtered_count > 0:
+                self.progress_signal.emit(f"第 {page} 页过滤了 {filtered_count} 张不符合条件的图片。")
+            
+            if not filtered_wallpapers:
+                self.progress_signal.emit(f"第 {page} 页没有符合条件的图片，继续下一页...")
+                page += 1
+                time.sleep(0.3)  # Small delay
+                continue
                 
             tasks = []
             skipped_count = 0
-            for wp in wallpapers:
+            for wp in filtered_wallpapers:
                 url = wp.get('path')
                 wp_id = wp.get('id')
                 ext = os.path.splitext(url)[1]
@@ -71,13 +118,10 @@ class WorkerThread(QThread):
 
             if not tasks:
                 self.progress_signal.emit(f"第 {page} 页没有新图片需要下载。")
+                page += 1
                 continue
 
-            self.progress_signal.emit(f"第 {page} 页找到 {len(tasks)} 张新壁纸，准备下载...")
-            
-            # 使用 downloader 的 batch_download (同步调用，会阻塞线程，但我们在 WorkerThread 里)
-            # 为了实时反馈进度，这里稍微修改调用方式，或者我们接受 downloader 只是批量下载
-            # 简单起见，这里直接调用 batch_download，它会使用线程池
+            self.progress_signal.emit(f"第 {page} 页找到 {len(tasks)} 张符合条件的新壁纸，准备下载...")
             
             def log_progress(msg):
                 self.progress_signal.emit(msg)
@@ -86,6 +130,9 @@ class WorkerThread(QThread):
             success_count = sum(results)
             total_downloaded += success_count
             self.progress_signal.emit(f"第 {page} 页下载完成。成功: {success_count}, 失败/跳过: {len(results) - success_count}")
+            
+            page += 1
+            time.sleep(0.3)  # Rate limiting protection
 
         self.progress_signal.emit(f"任务结束。共下载 {total_downloaded} 张图片。")
         self.finished_signal.emit()
@@ -240,24 +287,57 @@ class MainWindow(QMainWindow):
         self.ratio_combo.addItem("4x3", "4x3")
         self.ratio_combo.addItem("Portrait", "9x16,10x16")
         options_layout2.addWidget(self.ratio_combo)
+        
+        filter_layout.addLayout(options_layout2)
+        
+        # Options Line 3 (New Filters & Pages/Threads)
+        options_layout3 = QHBoxLayout()
+        
+        # Min Favorites
+        options_layout3.addWidget(QLabel("最少点赞:"))
+        self.min_favs_spin = QSpinBox()
+        self.min_favs_spin.setRange(0, 1000000)
+        self.min_favs_spin.setValue(0)
+        self.min_favs_spin.setSingleStep(10)
+        options_layout3.addWidget(self.min_favs_spin)
 
-        options_layout2.addSpacing(20)
+        options_layout3.addSpacing(10)
+
+        # Min Views
+        options_layout3.addWidget(QLabel("最少观看:"))
+        self.min_views_spin = QSpinBox()
+        self.min_views_spin.setRange(0, 100000000)
+        self.min_views_spin.setValue(0)
+        self.min_views_spin.setSingleStep(1000)
+        options_layout3.addWidget(self.min_views_spin)
+
+        options_layout3.addSpacing(20)
 
         # Pages
-        options_layout2.addWidget(QLabel("页数:"))
+        pages_layout = QVBoxLayout()
+        pages_label_layout = QHBoxLayout()
+        pages_label_layout.addWidget(QLabel("页数:"))
+        self.all_pages_check = QCheckBox("全部")
+        self.all_pages_check.setToolTip("下载该搜索条件下的所有页")
+        self.all_pages_check.toggled.connect(self.toggle_pages_spin)
+        pages_label_layout.addWidget(self.all_pages_check)
+        pages_layout.addLayout(pages_label_layout)
+        
         self.page_spin = QSpinBox()
-        self.page_spin.setRange(1, 100)
+        self.page_spin.setRange(1, 99999)
         self.page_spin.setValue(1)
-        options_layout2.addWidget(self.page_spin)
+        pages_layout.addWidget(self.page_spin)
+        
+        options_layout3.addLayout(pages_layout)
 
         # Threads
-        options_layout2.addWidget(QLabel("下载线程:"))
+        options_layout3.addWidget(QLabel("下载线程:"))
         self.thread_spin = QSpinBox()
         self.thread_spin.setRange(1, 20)
         self.thread_spin.setValue(5)
-        options_layout2.addWidget(self.thread_spin)
-        
-        filter_layout.addLayout(options_layout2)
+        options_layout3.addWidget(self.thread_spin)
+
+        filter_layout.addLayout(options_layout3)
         
         filter_group.setLayout(filter_layout)
         layout.addWidget(filter_group)
@@ -275,6 +355,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.log_area)
         
         self.worker = None
+
+    def toggle_pages_spin(self, checked):
+        self.page_spin.setDisabled(checked)
 
     def browse_directory(self):
         directory = QFileDialog.getExistingDirectory(self, "选择保存路径")
@@ -298,6 +381,10 @@ class MainWindow(QMainWindow):
         api_key = self.api_input.text().strip()
         save_dir = self.dir_input.text().strip()
         keyword = self.keyword_input.text().strip()
+        
+        # Remove appending to keyword, pass explicitly
+        min_favs = self.min_favs_spin.value()
+        min_views = self.min_views_spin.value()
         
         # Construct categories string "100" etc
         c_gen = "1" if self.cat_general.isChecked() else "0"
@@ -326,7 +413,12 @@ class MainWindow(QMainWindow):
                 resolutions = res_val
 
         ratios = self.ratio_combo.currentData()
-        pages = self.page_spin.value()
+        
+        if self.all_pages_check.isChecked():
+            pages = 999999 # Effective infinity for this script
+        else:
+            pages = self.page_spin.value()
+            
         max_workers = self.thread_spin.value()
         
         if not os.path.exists(save_dir):
@@ -337,9 +429,9 @@ class MainWindow(QMainWindow):
                 return
 
         self.start_btn.setText("停止下载")
-        self.log(f"任务: '{keyword}' | 排序:{sorting} | 分辨率:{res_val}({res_mode}) | 比例:{ratios}")
+        self.log(f"任务: '{keyword}' | 排序:{sorting} | 分辨率:{res_val}({res_mode}) | 比例:{ratios} | 页数:{'ALL' if pages > 100000 else pages} | 过滤: Fav>={min_favs}, View>={min_views}")
         
-        self.worker = WorkerThread(api_key, save_dir, keyword, categories, purity, sorting, resolutions, ratios, atleast, pages, max_workers)
+        self.worker = WorkerThread(api_key, save_dir, keyword, categories, purity, sorting, resolutions, ratios, atleast, pages, max_workers, min_favs, min_views)
         self.worker.progress_signal.connect(self.log)
         self.worker.finished_signal.connect(self.on_finished)
         self.worker.start()

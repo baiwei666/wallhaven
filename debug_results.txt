@@ -1,0 +1,46 @@
+Testing query: 'anime'
+URL: https://wallhaven.cc/api/v1/search?q=anime&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 24
+First result ID: 3qqdg6
+--------------------
+Testing query: 'favorites:>=100'
+URL: https://wallhaven.cc/api/v1/search?q=favorites%3A%3E%3D100&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 0
+--------------------
+Testing query: 'views:>=5000'
+URL: https://wallhaven.cc/api/v1/search?q=views%3A%3E%3D5000&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 0
+--------------------
+Testing query: 'anime favorites:>=100'
+URL: https://wallhaven.cc/api/v1/search?q=anime+favorites%3A%3E%3D100&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 0
+--------------------
+Testing query: 'favorites:100..'
+URL: https://wallhaven.cc/api/v1/search?q=favorites%3A100..&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 0
+--------------------
+Testing query: 'id:3qqdg6'
+URL: https://wallhaven.cc/api/v1/search?q=id%3A3qqdg6&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 0
+--------------------
+Testing Manual URL: 'https://wallhaven.cc/api/v1/search?q=favorites:>=100&categories=111&purity=100&sorting=toplist'
+URL: https://wallhaven.cc/api/v1/search?q=favorites:%3E=100&categories=111&purity=100&sorting=toplist
+Status Code: 200
+Results found: 0
+--------------------
+Testing query: 'favorites:>=284'
+URL: https://wallhaven.cc/api/v1/search?q=favorites%3A%3E%3D284&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 0
+--------------------
+Testing query: 'views:>=31036'
+URL: https://wallhaven.cc/api/v1/search?q=views%3A%3E%3D31036&categories=111&purity=100&sorting=toplist&page=1
+Status Code: 200
+Results found: 0
+--------------------
